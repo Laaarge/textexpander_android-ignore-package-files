@@ -20,35 +20,31 @@ class TextExpanderService : AccessibilityService() {
     private fun handleTextChanged(node: AccessibilityNodeInfo, beforeText: String?, addedText: String?) {
         val currentText = node.text?.toString() ?: return
 
-        // Find the last word and the character before it
+        // 1. Handle word triggers ONLY if a separator was just typed.
         val lastWordInfo = findLastWord(currentText)
-
-        TriggerRepository.triggers.forEach { match ->
-            // Word trigger logic
-            if (match.word) {
-                // Check if the last word matches the trigger and is preceded by a separator
-                if (lastWordInfo != null && lastWordInfo.word == match.trigger && lastWordInfo.isPrecededBySeparator) {
-                    // The user just typed a separator, which is now at the end of currentText
+        if (lastWordInfo != null) {
+            for (match in TriggerRepository.triggers) {
+                if (match.word && lastWordInfo.word == match.trigger && lastWordInfo.isPrecededBySeparator) {
                     val separator = currentText.last().toString()
                     val triggerStartIndex = lastWordInfo.startIndex
-
                     val newText = currentText.substring(0, triggerStartIndex) + match.replace + separator
 
                     node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
                         putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
                     })
-                    return // Exit after expansion
+                    return // Word trigger fired, we are done.
                 }
             }
-            // Non-word trigger logic (instant expansion)
-            else {
-                if (currentText.endsWith(match.trigger)) {
-                    val newText = currentText.substring(0, currentText.length - match.trigger.length) + match.replace
-                    node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
-                        putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
-                    })
-                    return // Exit after expansion
-                }
+        }
+
+        // 2. Handle non-word triggers (instant expansion).
+        for (match in TriggerRepository.triggers) {
+            if (!match.word && currentText.endsWith(match.trigger)) {
+                val newText = currentText.substring(0, currentText.length - match.trigger.length) + match.replace
+                node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
+                    putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
+                })
+                return // Non-word trigger fired, we are done.
             }
         }
     }
