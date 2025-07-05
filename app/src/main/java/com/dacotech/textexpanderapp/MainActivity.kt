@@ -95,7 +95,8 @@ class MainActivity : AppCompatActivity() {
                 if (file.isDirectory) {
                     readFilesRecursive(file)  // Recursive call for subdirectories
                 } else if (file.isFile && file.name?.endsWith(".yml") == true) {
-                    if (file.name.startsWith("_")){
+                    val fileName = file.name ?: "Unknown"
+                    if (fileName.startsWith("_")){
                         Log.d("File Access", "Skipping file: ${file.name} as it starts with underscore")
                         continue
                     }
